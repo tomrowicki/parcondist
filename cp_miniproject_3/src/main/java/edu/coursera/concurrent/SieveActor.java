@@ -21,8 +21,8 @@ public final class SieveActor extends Sieve {
 	 */
 	@Override
 	public int countPrimes(final int limit) {
-		int numPrimes = 1;
-		SieveActorActor sieveActor = new SieveActorActor();
+		int numPrimes = 0;
+		SieveActorActor sieveActor = new SieveActorActor(2);
 		PCDP.finish(() -> {
 			for (int i = 3; i <= limit; i += 2) {
 				sieveActor.send(i);
@@ -49,10 +49,18 @@ public final class SieveActor extends Sieve {
 		 *
 		 * @param msg Received message
 		 */
-		private static final int MAX_LOCAL_PRIMES = 10_000;
-		private final int localPrimes[] = new int[MAX_LOCAL_PRIMES];
-		private int numLocalPrimes = 1;
+		private static final int MAX_LOCAL_PRIMES = 1000;
+		private int localPrimes[];
+		private int numLocalPrimes;
 		private SieveActorActor nextActor;
+
+		public SieveActorActor(final int localPrime) {
+			super();
+			this.localPrimes = new int[MAX_LOCAL_PRIMES];
+			this.localPrimes[0] = localPrime;
+			this.numLocalPrimes = 1;
+			this.nextActor = null;
+		}
 
 		public SieveActorActor nextActor() {
 			return nextActor;
@@ -65,14 +73,13 @@ public final class SieveActor extends Sieve {
 		@Override
 		public void process(final Object msg) {
 			int candidate = (int) msg;
-			localPrimes[0] = candidate;
 			final boolean locallyPrime = isLocallyPrime(candidate);
 			if (locallyPrime) {
 				if (numLocalPrimes < MAX_LOCAL_PRIMES) {
 					localPrimes[numLocalPrimes] = candidate;
 					numLocalPrimes += 1;
 				} else if (nextActor == null) {
-					nextActor = new SieveActorActor();
+					nextActor = new SieveActorActor(candidate);
 				} else {
 					nextActor.send(msg);
 				}
@@ -87,7 +94,8 @@ public final class SieveActor extends Sieve {
 			return isPrime[0];
 		}
 
-		private void checkPrimeKernel(int candidate, boolean[] isPrime, int startIndex, int endIndex) {
+		private void checkPrimeKernel(final int candidate, final boolean[] isPrime, final int startIndex,
+				final int endIndex) {
 			for (int i = startIndex; i < endIndex; i++) {
 				if (candidate % localPrimes[i] == 0) {
 					isPrime[0] = false;
